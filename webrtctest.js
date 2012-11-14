@@ -26,6 +26,14 @@ window.addEventListener("message", function(event) {
   }
 });
 
+function showVideoStream(stream) {
+  if ("mozSrcObject" in v) {
+      v.mozSrcObject = stream;
+  } else {
+      v.src = webkitURL.createObjectURL(stream);
+  }
+}
+
 pc.onicecandidate = function(event) {
     console.log("onicecandidate");
     otherwin.postMessage({"type":"ice", "candidate": JSON.stringify(event.candidate)}, "*");
@@ -33,31 +41,42 @@ pc.onicecandidate = function(event) {
 
 pc.onaddstream = function(streamevent) {
   console.log("onaddstream: " + streamevent);
-  v.src = webkitURL.createObjectURL(streamevent.stream);
-  v.play();
+  showVideoStream(streamevent.stream);
 };
 
 function start() {
   console.log("start");
   otherwin = window.open("webrtctest.html", "webrtctest2", "resizable=yes,scrollbars=yes,toolbar=yes");
   otherwin.onload = function() {
-    navigator.webkitGetUserMedia({video: true}, function(stream) {
+    var streams = {video: true};
+    function failure(err) {
+        console.error("getUserMedia error: " + err.message);
+    }
+    function gotStream(stream) {
       console.log("getUserMedia: " + stream);
       pc.addStream(stream);
-      v.src = webkitURL.createObjectURL(stream);
-      v.play();
+      showVideoStream(stream);
       pc.createOffer(function(offer) {
         console.log("offer created");
         otherwin.postMessage({"type": "offer", "sdp": offer.sdp}, "*");
         pc.setLocalDescription(offer);
-      }, function(err) { console.log("createOffer error: " + err.message); error = err; });
-    }, function(err) { console.log("getUserMedia error: " + err.message); error = err; });
+      }, function(err) { console.log("createOffer error: " + err.message); });
+    }
+    if (navigator.webkitGetUserMedia) {
+      navigator.webkitGetUserMedia(streams, gotStream, failure);
+    } else if (navigator.mozGetUserMedia) {
+      navigator.mozGetUserMedia(streams, gotStream, failure);
+    }
   };
 }
 
 function setOffer(sdp) {
   console.log("setOffer");
-  var offer = new RTCSessionDescription({type:"offer", sdp:sdp});
+  var offer = {type:"offer", sdp:sdp};
+  try {
+    offer = new RTCSessionDescription(offer);
+  } catch (x) {
+  }
   pc.setRemoteDescription(offer, function() {
     console.log("setRemoteDescription");
     pc.createAnswer(function(answer) {
@@ -69,14 +88,18 @@ function setOffer(sdp) {
 };
 
 function setAnswer(sdp) {
- console.log("setAnswer");
- var answer = new RTCSessionDescription({type:"answer", sdp:sdp});
- pc.setRemoteDescription(answer, function() {
-   console.log("setRemoteDescription");
- });
+  console.log("setAnswer");
+  var answer = {type:"answer", sdp:sdp};
+  try {
+    answer = new RTCSessionDescription(answer);
+  } catch (x) {
+  }
+  pc.setRemoteDescription(answer, function() {
+    console.log("setRemoteDescription");
+  });
 }
 
 function setice(ice) {
-    console.log("setice");
-    pc.addIceCandidate(new RTCIceCandidate(ice));
+  console.log("setice");
+  pc.addIceCandidate(new RTCIceCandidate(ice));
 }
