@@ -44,6 +44,14 @@ pc.onaddstream = function(streamevent) {
   showVideoStream(streamevent.stream);
 };
 
+pc.onopen = function() {
+  console.log("onopen");
+};
+
+pc.onstatechange = function() {
+  console.log("onstatechange: " + pc.readyState);
+}
+
 function start() {
   console.log("start");
   otherwin = window.open("webrtctest.html", "webrtctest2", "resizable=yes,scrollbars=yes,toolbar=yes");
@@ -73,11 +81,13 @@ function start() {
 function setOffer(sdp) {
   console.log("setOffer");
   var offer = {type:"offer", sdp:sdp};
+  var rtc_offer = offer;
   try {
-    offer = new RTCSessionDescription(offer);
+    rtc_offer = new RTCSessionDescription(offer);
   } catch (x) {
+    rtc_offer = offer;
   }
-  pc.setRemoteDescription(offer, function() {
+  pc.setRemoteDescription(rtc_offer, function() {
     console.log("setRemoteDescription");
     pc.createAnswer(function(answer) {
       console.log("answer created");
@@ -90,11 +100,13 @@ function setOffer(sdp) {
 function setAnswer(sdp) {
   console.log("setAnswer");
   var answer = {type:"answer", sdp:sdp};
+  var rtc_answer;
   try {
-    answer = new RTCSessionDescription(answer);
+    rtc_answer = new RTCSessionDescription(answer);
   } catch (x) {
+    rtc_answer = answer;
   }
-  pc.setRemoteDescription(answer, function() {
+  pc.setRemoteDescription(rtc_answer, function() {
     console.log("setRemoteDescription");
   });
 }
