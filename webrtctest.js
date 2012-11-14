@@ -7,7 +7,8 @@ function createPeerConnection() {
 }
 
 var pc = createPeerConnection();
-var v = document.getElementById("video");
+var localvideo = document.getElementById("local");
+var remotevideo = document.getElementById("remote");
 var otherwin = window.opener || null;
 
 if (otherwin == null) {
@@ -26,12 +27,17 @@ window.addEventListener("message", function(event) {
   }
 });
 
-function showVideoStream(stream) {
+function showVideoStream(stream, v) {
   if ("mozSrcObject" in v) {
       v.mozSrcObject = stream;
   } else {
       v.src = webkitURL.createObjectURL(stream);
   }
+  v.play();
+}
+
+function debug_sdp(sdp) {
+  document.getElementById("out").appendChild(document.createTextNode(sdp));
 }
 
 pc.onicecandidate = function(event) {
@@ -41,7 +47,7 @@ pc.onicecandidate = function(event) {
 
 pc.onaddstream = function(streamevent) {
   console.log("onaddstream: " + streamevent);
-  showVideoStream(streamevent.stream);
+  showVideoStream(streamevent.stream, remotevideo);
 };
 
 if ('onopen' in pc) {
@@ -62,15 +68,26 @@ function start() {
     function failure(err) {
         console.error("getUserMedia error: " + err.message);
     }
-    function gotStream(stream) {
-      console.log("getUserMedia: " + stream);
-      pc.addStream(stream);
-      showVideoStream(stream);
+    function createOffer() {
       pc.createOffer(function(offer) {
         console.log("offer created");
+        debug_sdp(offer.sdp);
         otherwin.postMessage({"type": "offer", "sdp": offer.sdp}, "*");
         pc.setLocalDescription(offer);
       }, function(err) { console.log("createOffer error: " + err.message); });
+    }
+    function gotStream(stream) {
+      console.log("getUserMedia: " + stream);
+      pc.addStream(stream);
+      showVideoStream(stream, localvideo);
+      if (navigator.mozGetUserMedia) {
+        navigator.mozGetUserMedia({audio:true, fake:true}, function(stream) {
+          pc.addStream(stream);
+          createOffer();
+        }, function(err) { console.error(err); });
+      } else {
+        createOffer();
+      }
     }
     if (navigator.webkitGetUserMedia) {
       navigator.webkitGetUserMedia(streams, gotStream, failure);
@@ -91,11 +108,26 @@ function setOffer(sdp) {
   }
   pc.setRemoteDescription(rtc_offer, function() {
     console.log("setRemoteDescription");
-    pc.createAnswer(function(answer) {
-      console.log("answer created");
-      pc.setLocalDescription(answer);
-      otherwin.postMessage({"type": "answer", "sdp": answer.sdp}, "*");
-    });
+    function createAnswer() {
+      pc.createAnswer(function(answer) {
+        console.log("answer created");
+        debug_sdp(answer.sdp);
+        pc.setLocalDescription(answer);
+        otherwin.postMessage({"type": "answer", "sdp": answer.sdp}, "*");
+      });
+    }
+    if (navigator.mozGetUserMedia) {
+      navigator.mozGetUserMedia({video:true}, function(stream) {
+        showVideoStream(stream, localvideo);
+        pc.addStream(stream);
+        navigator.mozGetUserMedia({audio:true, fake:true}, function(stream) {
+          pc.addStream(stream);
+          createAnswer();
+        }, function(err) { console.error(err); });
+      }, function(err) { console.error(err); });
+    } else {
+      createAnswer();
+    }
   });
 };
 
