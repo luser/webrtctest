@@ -44,9 +44,11 @@ pc.onaddstream = function(streamevent) {
   showVideoStream(streamevent.stream);
 };
 
-pc.onopen = function() {
-  console.log("onopen");
-};
+if ('onopen' in pc) {
+  pc.onopen = function() {
+    console.log("onopen");
+  };
+}
 
 pc.onstatechange = function() {
   console.log("onstatechange: " + pc.readyState);
