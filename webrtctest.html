@@ -1,12 +1,32 @@
+<!--
+ Any copyright is dedicated to the Public Domain.
+ http://creativecommons.org/publicdomain/zero/1.0/
+-->
 <!DOCTYPE html>
 <html>
 <head>
+<meta charset="utf-8">
+<title>WebRTC test</title>
+<script src="adapter-latest.js"></script>
+<script src="webrtctest.js"></script>
 </head>
 <body>
+<div style="display: inline-block">
+<span>Local:</span><br>
 <video id="local" autoplay></video>
+</div>
+<div style="display: inline-block">
+<span>Remote:</span><br>
 <video id="remote" autoplay></video>
+</div>
 <pre id="out">
 </pre>
+<div id="controls" style="display: none">
+<input type="checkbox" id="video" checked>Video
+<input type="checkbox" id="audio" checked>Audio
+<input type="checkbox" id="data" checked>DataChannel
+<p><button id="start">Start</button>
+<p>Clicking Start will open another browser window and create a WebRTC connection between the two windows.
+</div>
 </body>
-<script src="webrtctest.js"></script>
 </html>
